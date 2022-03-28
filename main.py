@@ -1,5 +1,3 @@
-from asyncio import selector_events
-from tkinter.ttk import Separator
 import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.common.by import By
