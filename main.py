@@ -31,6 +31,9 @@ def main():
         image_name = 'img\\' + name + '.png'
         sleep(2.5)
 
+
+        # soldout_sizes = get_soldout_sizes(driver)
+
         # click on size guide options
         driver.find_element(
             By.CLASS_NAME, 'product-intro__size-guide-t').click()
@@ -44,7 +47,7 @@ def main():
 
 
         # Agregar ambas medidas: USA y EUR
-        other_size = driver.find_element(By.CLASS_NAME, 'common-sizetable__country') # Desplegar las opciones
+        other_size = driver.find_element(By.XPATH, '//div[@class="common-sizetable__units common-detail__units"]') # Desplegar las opciones
         other_size.click()
         sleep(1)
 
@@ -60,8 +63,20 @@ def main():
             for option in options:
                 if option.text == 'EU':
                     option.click()
-
+        
         table.screenshot(image_name)
+
+
+# def get_soldout_sizes(driver):
+#     soldout_sizes = []
+#     sizes_box = driver.find_element(By.XPATH, '//div[@class="product-intro__select-box"]//div[@class="product-intro__size"]//div[@class="product-intro__size-choose"]')
+#     soldout_elements = sizes_box.find_elements(By.XPATH, '//*[contains(@class,"product-intro__size-radio_soldout")]')
+    
+#     for soldout_element in soldout_elements:
+#         soldout_size = soldout_element.find_element(By.CLASS_NAME, 'product-intro__size-radio-inner').text
+#         soldout_sizes.append(soldout_size)
+
+#     print(soldout_sizes)    
 
 
 
