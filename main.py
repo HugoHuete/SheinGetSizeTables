@@ -24,6 +24,7 @@ def main():
     hover.perform()  # hover to show language options
     driver.find_element(By.LINK_TEXT, 'Español').click()
 
+    first_iteration = True
 
     # Iterate for each url and save size table image with each name
     for name, url in data.values:
@@ -38,6 +39,10 @@ def main():
             By.CLASS_NAME, 'product-intro__size-guide-t').click()
         sleep(1)
 
+        if first_iteration:
+            driver.find_element(By.XPATH, '//div[@class="common-detail__button"]//div[@class="common-detail__button-inner"]//*[contains(@data-unit,"CM")]').click()
+            first_iteration = False
+
         # Search for table element and look in the first value of the first column to see if it uses USA or EUR sizes
         table = driver.find_element(
             By.XPATH, '//div[@class="common-sizeinfo is-modal"]//div[@class="common-sizetable"]')
@@ -47,7 +52,6 @@ def main():
 
         # Delete rows with sizes that are soldout before screenshot
         del_soldout_sizes_rows(driver, rows, soldout_sizes)
-
 
         # Agregar ambas medidas: USA y EUR
         other_size = driver.find_element(By.XPATH, '//div[@class="common-sizetable__units common-detail__units"]') # Desplegar las opciones
