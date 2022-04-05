@@ -15,12 +15,12 @@ def main():
     driver.get('https://us.shein.com/')
 
     # cerrar pantalla de cupones
-    btCloseCoupons = driver.find_element(By.CLASS_NAME, 'S-dialog__closebtn')
-    btCloseCoupons.click()
+    bt_close_coupons = driver.find_element(By.CLASS_NAME, 'S-dialog__closebtn')
+    bt_close_coupons.click()
 
     # change languague to spanish
-    btGlobal = driver.find_element(By.CLASS_NAME, 'sui_icon_nav_global_24px')
-    hover = ActionChains(driver).move_to_element(btGlobal)
+    bt_global = driver.find_element(By.CLASS_NAME, 'sui_icon_nav_global_24px')
+    hover = ActionChains(driver).move_to_element(bt_global)
     hover.perform()  # hover to show language options
     driver.find_element(By.LINK_TEXT, 'Español').click()
 
@@ -28,9 +28,16 @@ def main():
 
     # Iterate for each url and save size table image with each name
     for name, url in data.values:
-        driver.get(url)
+        # Avoiding errors while getting to the url
+        while True:
+            try:
+                driver.get(url)
+                break
+            except:
+                continue
+
+        
         image_name = 'img\\' + name + '.png'
-        sleep(3)
 
         soldout_sizes = get_soldout_sizes(driver)
 
@@ -44,8 +51,7 @@ def main():
             first_iteration = False
 
         # Search for table element and look in the first value of the first column to see if it uses USA or EUR sizes
-        table = driver.find_element(
-            By.XPATH, '//div[@class="common-sizeinfo is-modal"]//div[@class="common-sizetable"]')
+        table = driver.find_element(By.XPATH, '//div[@class="common-sizeinfo is-modal"]//div[@class="common-sizetable"]')
         rows = table.find_elements(By.TAG_NAME, 'tr')
         first_data_row = rows[1]  # Get first row with data
         first_col_data = first_data_row.find_elements(By.TAG_NAME, 'td')[0].text  # Get first element
@@ -71,6 +77,8 @@ def main():
                 if option.text == 'EU':
                     option.click()
         
+        modify_table_width(driver, rows[0])
+        
         table.screenshot(image_name)
 
 
@@ -90,12 +98,22 @@ def get_soldout_sizes(driver):
 def del_soldout_sizes_rows(driver, rows, soldout_sizes):
     for row in rows:
         selected_size = row.find_elements(By.TAG_NAME, 'td')[0].text
-        print(selected_size)
         if selected_size in soldout_sizes:
             driver.execute_script("""
             var element = arguments[0];
             element.parentNode.removeChild(element);
             """, row)
+
+
+def modify_table_width(driver, row):
+    #first we need to identify the table lenght so we can modify the containers width
+    table_width = row.get_property('scrollWidth')
+    new_container_width = str(table_width + 120)
+
+    # Find the container element and increment the width
+    container_element = driver.find_element(By.XPATH, '//*[contains(@class,"S-dialog common-detail-sizeGuidemodal")]//*[contains(@class,"S-dialog__wrapper")]') 
+    driver.execute_script(f"arguments[0].setAttribute('style', 'width:{new_container_width}px;')", container_element)
+    
 
 
 if __name__ == '__main__':
