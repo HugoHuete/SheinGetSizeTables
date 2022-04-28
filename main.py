@@ -8,15 +8,16 @@ from time import sleep
 def main():
     # Get image names and urls from a csv file.
     data = pd.read_csv('urls.csv', sep=';')
+    data["Name"] = data["Name"].apply(lambda name: 'img\\' + name + '.png')
 
     # open google chrome browser and go to us.shein.com
     driver = webdriver.Chrome()
-    driver.implicitly_wait(4)
+    driver.maximize_window()
+    driver.implicitly_wait(10)
     driver.get('https://us.shein.com/')
 
-    # cerrar pantalla de cupones
-    bt_close_coupons = driver.find_element(By.CLASS_NAME, 'S-dialog__closebtn')
-    bt_close_coupons.click()
+    # Close coupons element
+    driver.find_element(By.CLASS_NAME, 'S-dialog__closebtn').click()
 
     # change languague to spanish
     bt_global = driver.find_element(By.CLASS_NAME, 'sui_icon_nav_global_24px')
@@ -36,56 +37,49 @@ def main():
             except:
                 continue
 
-        
-        image_name = 'img\\' + name + '.png'
-
         soldout_sizes = get_soldout_sizes(driver)
 
         # click on size guide options
         driver.find_element(
             By.CLASS_NAME, 'product-intro__size-guide-t').click()
-        sleep(1)
 
+        # Set measures to cm. Only needed in first iteration
         if first_iteration:
             driver.find_element(By.XPATH, '//div[@class="common-detail__button"]//div[@class="common-detail__button-inner"]//*[contains(@data-unit,"CM")]').click()
             first_iteration = False
 
-        # Search for table element and look in the first value of the first column to see if it uses USA or EUR sizes
+        # Search for table element and get all the rows 
         table = driver.find_element(By.XPATH, '//div[@class="common-sizeinfo is-modal"]//div[@class="common-sizetable"]')
         rows = table.find_elements(By.TAG_NAME, 'tr')
+
+        # Use first element to know if its USA or EUR standard
         first_data_row = rows[1]  # Get first row with data
-        first_col_data = first_data_row.find_elements(By.TAG_NAME, 'td')[0].text  # Get first element
+        standard_used = first_data_row.find_elements(By.TAG_NAME, 'td')[0].text  # Get first element
 
         # Delete rows with sizes that are soldout before screenshot
         del_soldout_sizes_rows(driver, rows, soldout_sizes)
 
-        # Agregar ambas medidas: USA y EUR
-        other_size = driver.find_element(By.XPATH, '//div[@class="common-sizetable__units common-detail__units"]') # Desplegar las opciones
-        other_size.click()
-        sleep(2)
-
+        # Add both standards: USA y EUR
+        driver.find_element(By.XPATH, '//div[@class="common-sizetable__units common-detail__units"]').click() # Desplegar las opciones
         size_options_box = driver.find_element(By.CLASS_NAME, 'common-sizetable__country-box')
-        sleep(1)
-        options = size_options_box.find_elements(By.TAG_NAME, 'li') # Extraer todas las opciones
+        options = size_options_box.find_elements(By.TAG_NAME, 'li') # Extraer todas las opciones+
 
-        if first_col_data[0:2] in ('EU', 'CN'):
-            for option in options:
-                if option.text == 'US':
-                    option.click()
-        else:
-            for option in options:
-                if option.text == 'EU':
-                    option.click()
+        # If standards is US add EUR, otherwise add EU
+        option_to_add = 'EU' if standard_used[0:2] == 'US' else 'US'
+        for option in options:
+            if option.text == option_to_add:
+                option.click()
+
         
         modify_table_width(driver, rows[0])
         
-        table.screenshot(image_name)
+        table.screenshot(name)
 
 
 def get_soldout_sizes(driver):
     soldout_sizes = []
     sizes_box = driver.find_element(By.XPATH, '//div[@class="product-intro__select-box"]//div[@class="product-intro__size"]//div[@class="product-intro__size-choose"]')
-    soldout_elements = sizes_box.find_elements(By.XPATH, '//*[contains(@class,"product-intro__size-radio_soldout")]')
+    soldout_elements = sizes_box.find_elements(By.XPATH, './/*[contains(@class,"product-intro__size-radio_soldout")]')
     
     for soldout_element in soldout_elements:
         soldout_size = soldout_element.find_element(By.CLASS_NAME, 'product-intro__size-radio-inner').text
@@ -97,7 +91,7 @@ def get_soldout_sizes(driver):
 
 def del_soldout_sizes_rows(driver, rows, soldout_sizes):
     for row in rows:
-        selected_size = row.find_elements(By.TAG_NAME, 'td')[0].text
+        selected_size = row.find_element(By.XPATH, './/td[1]').text
         if selected_size in soldout_sizes:
             driver.execute_script("""
             var element = arguments[0];
