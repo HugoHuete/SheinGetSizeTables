@@ -1,8 +1,13 @@
 import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.action_chains import ActionChains
+import urllib.request
 from time import sleep
+from PIL import Image
+from glob import glob
+import os
 
 
 def main():
@@ -11,13 +16,15 @@ def main():
     data["Name"] = data["Name"].apply(lambda name: 'img\\' + name + '.png')
 
     # open google chrome browser and go to us.shein.com
-    driver = webdriver.Chrome()
+    options = Options()
+    options.binary_location = "C:\Program Files\Google\Chrome Beta\Application\chrome.exe"
+    driver = webdriver.Chrome(chrome_options=options)
     driver.maximize_window()
-    driver.implicitly_wait(10)
+    driver.implicitly_wait(15)
     driver.get('https://us.shein.com/')
 
     # Close coupons element
-    driver.find_element(By.CLASS_NAME, 'S-dialog__closebtn').click()
+    driver.find_element(By.XPATH, '/html/body/div[1]/div[5]/div[1]/div/i').click()
 
     # change languague to spanish
     bt_global = driver.find_element(By.CLASS_NAME, 'sui_icon_nav_global_24px')
@@ -28,7 +35,7 @@ def main():
     first_iteration = True
 
     # Iterate for each url and save size table image with each name
-    for name, url in data.values:
+    for name, url, price in data.values:
         # Avoiding errors while getting to the url
         while True:
             try:
@@ -70,10 +77,18 @@ def main():
             if option.text == option_to_add:
                 option.click()
 
-        
+        # Get screenshot of full table
         modify_table_width(driver, rows[0])
-        
         table.screenshot(name)
+
+        # Close table and save product images
+        driver.find_element(By.XPATH, '/html/body/div[5]/div/i').click()
+        prod_img_name = name[:-4] + ' $' + str(price)
+        download_images(driver, prod_img_name)
+    
+    convert_webp_to_png()
+
+
 
 
 def get_soldout_sizes(driver):
@@ -108,6 +123,34 @@ def modify_table_width(driver, row):
     container_element = driver.find_element(By.XPATH, '//*[contains(@class,"S-dialog common-detail-sizeGuidemodal")]//*[contains(@class,"S-dialog__wrapper")]') 
     driver.execute_script(f"arguments[0].setAttribute('style', 'width:{new_container_width}px;')", container_element)
     
+
+def download_images(driver, image_name):
+    # Clickear en imagen para agrandarla
+    driver.find_element(By.XPATH, '//div[@class="swiper-slide product-intro__main-item cursor-zoom-in swiper-slide-active"]').click()
+    sleep(2)
+    images =  driver.find_elements(By.XPATH, '//div[@class="productimg-extend__thumbnails"]//ul//li')
+
+    
+    # Hover in each of the side images and screenshot the big image
+    counter = 0
+    for image in images:
+        hover = ActionChains(driver).move_to_element(image)
+        hover.perform()  
+        sleep(0.4)
+
+        # Get full image url
+        full_image_url = 'https:' + driver.find_element(By.XPATH, '//div[@class="productimg-extend__main-image"]//img').get_attribute("src")
+        full_name = image_name +' (' + str(counter) + ').webp'
+
+        urllib.request.urlretrieve(full_image_url, full_name)
+        counter += 1
+
+def convert_webp_to_png():
+    webp_images = glob("img/*.webp")
+    for img in webp_images:
+        converted_img_name = img.split(sep="\\")[1].split(sep=".")[0] + ".png"  # Extrae solamente en el nombre del archivo
+        Image.open(img).convert("RGB").save("img\\" + converted_img_name,"png")
+        os.remove(img)
 
 
 if __name__ == '__main__':
